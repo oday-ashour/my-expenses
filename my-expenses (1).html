@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="My Expenses">
+<title>My Expenses</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0D1117;
+    --bg2: #161B22;
+    --bg3: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --text: #E6EDF3;
+    --text2: rgba(255,255,255,0.45);
+    --text3: rgba(255,255,255,0.25);
+    --teal: #4ECDC4;
+    --red: #FF6B6B;
+    --yellow: #FFE66D;
+    --radius: 18px;
+    --nav-h: 72px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+
+  #app {
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    background: var(--bg);
+  }
+
+  /* ── scrollable content above nav ── */
+  .page {
+    padding-bottom: calc(var(--nav-h) + 20px);
+    min-height: 100vh;
+    animation: fadeUp 0.22s ease;
+  }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(10px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px;
+    height: var(--nav-h);
+    background: rgba(13,17,23,0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 200;
+  }
+
+  nav button {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px;
+    background: none; border: none;
+    color: var(--text3); font-family: 'Sora', sans-serif;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    cursor: pointer; padding-bottom: 8px;
+    transition: color 0.15s;
+  }
+  nav button.active { color: var(--teal); }
+  nav button span.ico { font-size: 22px; line-height: 1; }
+
+  /* ── FAB ── */
+  #fab {
+    position: fixed;
+    bottom: calc(var(--nav-h) + 16px);
+    right: calc(50% - 215px + 16px);
+    width: 54px; height: 54px; border-radius: 50%;
+    background: linear-gradient(135deg, #4ECDC4, #36A89F);
+    border: none; color: #0D1117; font-size: 28px;
+    cursor: pointer; font-weight: 700;
+    box-shadow: 0 8px 28px rgba(78,205,196,0.35);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 199; transition: transform 0.15s, box-shadow 0.15s;
+  }
+  #fab:active { transform: scale(0.93); box-shadow: 0 4px 14px rgba(78,205,196,0.25); }
+
+  /* ── HEADER ── */
+  .hdr {
+    padding: 20px 18px 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .hdr h2 { font-size: 18px; font-weight: 800; }
+  .back-btn {
+    background: none; border: none; color: var(--text2);
+    font-size: 22px; cursor: pointer; padding: 4px; line-height: 1;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin: 14px 14px 0;
+  }
+
+  /* ── BALANCE RING ── */
+  .ring-wrap { text-align:center; }
+  .ring-svg { transform: rotate(-90deg); }
+  .ring-bg { fill:none; stroke:rgba(255,255,255,0.07); stroke-width:10; }
+  .ring-fill {
+    fill:none; stroke-width:10; stroke-linecap:round;
+    transition: stroke-dasharray 0.7s cubic-bezier(.4,0,.2,1), stroke 0.4s;
+  }
+  .ring-center {
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+  }
+  .ring-lbl { font-size:10px; color:var(--text2); letter-spacing:0.08em; text-transform:uppercase; }
+  .ring-val { font-size:19px; font-weight:700; font-family:'DM Mono',monospace; color:#fff; }
+
+  /* ── STATS ROW ── */
+  .stats-row {
+    display:flex; justify-content:space-around;
+    margin-top:18px; padding-top:18px;
+    border-top:1px solid var(--border);
+  }
+  .stat-lbl { font-size:10px; color:var(--text2); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:4px; }
+  .stat-val { font-family:'DM Mono',monospace; font-weight:700; font-size:18px; }
+
+  /* ── CAT BARS ── */
+  .cat-bar { margin-bottom:10px; }
+  .cat-bar-hdr { display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px; }
+  .cat-bar-track { height:5px; background:rgba(255,255,255,0.07); border-radius:3px; overflow:hidden; }
+  .cat-bar-fill { height:100%; border-radius:3px; transition:width 0.5s ease; }
+
+  /* ── SECTION TITLE ── */
+  .sec-title {
+    font-size:11px; font-weight:700; letter-spacing:0.1em;
+    text-transform:uppercase; color:var(--text2);
+    padding: 18px 18px 8px;
+  }
+
+  /* ── TRANSACTION ROW ── */
+  .tx-row {
+    display:flex; align-items:center; gap:11px;
+    padding:12px 18px; border-bottom:1px solid rgba(255,255,255,0.04);
+  }
+  .tx-ico {
+    width:38px; height:38px; border-radius:11px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:17px; flex-shrink:0;
+  }
+  .tx-info { flex:1; min-width:0; }
+  .tx-name { font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tx-sub { font-size:11px; color:var(--text3); margin-top:1px; }
+  .tx-amount { font-family:'DM Mono',monospace; font-weight:700; color:var(--red); font-size:14px; flex-shrink:0; }
+  .del-btn {
+    background:none; border:none; color:rgba(255,255,255,0.18);
+    font-size:19px; cursor:pointer; padding:0 4px; flex-shrink:0;
+    line-height:1;
+  }
+  .del-btn:active { color: var(--red); }
+
+  /* ── INPUTS ── */
+  .field { margin-bottom:18px; }
+  .field label { display:block; font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text2); margin-bottom:7px; }
+  input[type=number], input[type=text] {
+    width:100%; background:rgba(255,255,255,0.05);
+    border:1.5px solid var(--border); border-radius:13px;
+    padding:14px 16px; color:#fff; font-family:'DM Mono',monospace;
+    font-size:16px; outline:none; transition:border-color 0.15s;
+    -webkit-appearance:none;
+  }
+  input[type=number]:focus, input[type=text]:focus { border-color: var(--teal); }
+  input[type=number]::placeholder, input[type=text]::placeholder { color:var(--text3); }
+  input[type=number] { font-size:28px; font-weight:700; text-align:center; }
+
+  /* ── CATEGORY GRID ── */
+  .cat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .cat-btn {
+    display:flex; align-items:center; gap:8px;
+    padding:12px 10px; border-radius:12px;
+    background:rgba(255,255,255,0.04);
+    border:1.5px solid var(--border);
+    color:rgba(255,255,255,0.55); font-family:'Sora',sans-serif;
+    font-weight:600; font-size:13px; cursor:pointer;
+    transition:all 0.15s;
+  }
+  .cat-btn span.e { font-size:18px; }
+  .cat-btn.sel { background: color-mix(in srgb, var(--cat-c) 15%, transparent); border-color: var(--cat-c); color: var(--cat-c); }
+
+  /* ── PRIMARY BUTTON ── */
+  .btn-primary {
+    width:100%; padding:15px; background:var(--teal);
+    color:#0D1117; border:none; border-radius:14px;
+    font-family:'Sora',sans-serif; font-weight:800;
+    font-size:15px; cursor:pointer; transition:opacity 0.15s, transform 0.1s;
+  }
+  .btn-primary:disabled { opacity:0.35; cursor:default; }
+  .btn-primary:active:not(:disabled) { transform:scale(0.98); }
+
+  /* ── GHOST BUTTON ── */
+  .btn-ghost {
+    padding:12px 20px; background:rgba(255,255,255,0.06);
+    color:var(--text); border:1px solid var(--border);
+    border-radius:13px; font-family:'Sora',sans-serif;
+    font-weight:600; font-size:13px; cursor:pointer;
+  }
+
+  /* ── PERIOD CARD ── */
+  .period-card {
+    background:var(--bg3); border:1px solid var(--border);
+    border-radius:var(--radius); padding:18px;
+    margin:0 14px 10px; cursor:pointer;
+    transition:border-color 0.2s;
+  }
+  .period-card:active { border-color: var(--teal); }
+  .period-card.current { border-color:rgba(78,205,196,0.3); }
+  .period-hdr { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+  .period-title { font-weight:700; font-size:15px; }
+  .period-badge {
+    font-size:10px; background:rgba(78,205,196,0.12); color:var(--teal);
+    padding:3px 9px; border-radius:20px; font-weight:700; letter-spacing:0.06em;
+    margin-top:3px; display:inline-block;
+  }
+  .period-amt { font-family:'DM Mono',monospace; font-weight:700; color:var(--red); font-size:16px; text-align:right; }
+  .period-sub { font-size:11px; color:var(--text3); text-align:right; margin-top:2px; }
+  .progress-track { height:4px; background:rgba(255,255,255,0.07); border-radius:3px; overflow:hidden; }
+  .progress-fill { height:100%; border-radius:3px; transition:width 0.5s ease; }
+  .period-footer { font-size:11px; color:var(--text3); margin-top:8px; }
+
+  /* ── SETUP PAGE ── */
+  .setup-wrap { padding:60px 20px 20px; text-align:center; }
+  .setup-emo { font-size:52px; margin-bottom:14px; }
+  .setup-wrap h1 { font-size:26px; font-weight:800; margin-bottom:6px; }
+  .setup-period { color:var(--teal); font-size:14px; font-weight:600; margin-bottom:8px; }
+  .setup-hint { color:var(--text2); font-size:13px; margin-bottom:40px; line-height:1.5; }
+  .setup-field { text-align:left; margin-bottom:24px; }
+
+  /* ── TOAST ── */
+  #toast {
+    position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-70px);
+    background:var(--teal); color:#0D1117; padding:10px 22px;
+    border-radius:30px; font-weight:700; font-size:14px;
+    z-index:300; white-space:nowrap;
+    transition:transform 0.3s cubic-bezier(.4,0,.2,1);
+    pointer-events:none;
+  }
+  #toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* ── COMPARE ── */
+  .cmp-card { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin:0 14px 12px; }
+  .cmp-cat-title { font-weight:700; font-size:15px; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .cmp-row { margin-bottom:10px; }
+  .cmp-row-hdr { display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; }
+  .cmp-track { height:6px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden; }
+  .cmp-fill { height:100%; border-radius:4px; transition:width 0.5s ease; }
+
+  /* ── EMPTY ── */
+  .empty { text-align:center; padding:50px 20px; color:var(--text3); }
+  .empty-emo { font-size:42px; margin-bottom:10px; }
+  .empty p { font-size:14px; line-height:1.6; }
+
+  /* ── VIEW ALL ── */
+  .view-all {
+    text-align:center; padding:14px 0; color:var(--teal);
+    font-size:13px; font-weight:600; cursor:pointer;
+    margin:0 18px;
+  }
+
+  /* ── PILL TAG ── */
+  .live-tag {
+    font-size:10px; font-weight:700; letter-spacing:0.06em;
+    background:rgba(78,205,196,0.1); color:var(--teal);
+    padding:5px 11px; border-radius:20px;
+  }
+
+  /* ── EXPORT BTN ── */
+  .export-btn {
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:calc(100% - 28px); margin:14px; padding:13px;
+    background:rgba(255,255,255,0.04); border:1px solid var(--border);
+    border-radius:13px; color:var(--text2); font-family:'Sora',sans-serif;
+    font-weight:600; font-size:13px; cursor:pointer;
+  }
+  .export-btn:active { border-color:var(--teal); color:var(--teal); }
+
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast">✓ Done</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'myexpenses_v2';
+
+const CATS = [
+  { id:'food',        label:'Food',         emoji:'🍽️', color:'#FF6B6B' },
+  { id:'transport',   label:'Transport',    emoji:'🚌', color:'#4ECDC4' },
+  { id:'shopping',    label:'Shopping',     emoji:'🛍️', color:'#FFE66D' },
+  { id:'bills',       label:'Bills',        emoji:'💡', color:'#A8E6CF' },
+  { id:'health',      label:'Health',       emoji:'💊', color:'#FF8B94' },
+  { id:'entertainment',label:'Fun',         emoji:'🎬', color:'#C3A6FF' },
+  { id:'other',       label:'Other',        emoji:'📦', color:'#90A4AE' },
+];
+const CAT = Object.fromEntries(CATS.map(c=>[c.id,c]));
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {periods:{}}; }
+  catch { return {periods:{}}; }
+}
+function saveData(d) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch(e){}
+}
+
+function getPeriodId(date) {
+  const d = date || new Date();
+  const day=d.getDate(), m=d.getMonth(), y=d.getFullYear();
+  if (day>=25) return `${y}-${String(m+1).padStart(2,'0')}`;
+  const p = new Date(y,m-1,25);
+  return `${p.getFullYear()}-${String(p.getMonth()+1).padStart(2,'0')}`;
+}
+function getPeriodLabel(id) {
+  const [y,m] = id.split('-').map(Number);
+  const s = new Date(y,m-1,25), e = new Date(y,m,24);
+  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${M[s.getMonth()]} 25 – ${M[e.getMonth()]} 24, ${e.getFullYear()}`;
+}
+function fmt(n) {
+  return '₪' + Number(n||0).toLocaleString('he-IL',{minimumFractionDigits:0,maximumFractionDigits:2});
+}
+function totalSpent(p) { return (p?.expenses||[]).reduce((s,e)=>s+Number(e.amount),0); }
+function catBreakdown(p) {
+  const m={};
+  (p?.expenses||[]).forEach(e=>{ m[e.category]=(m[e.category]||0)+Number(e.amount); });
+  return m;
+}
+function shortDate(iso) {
+  const d=new Date(iso);
+  return d.toLocaleDateString('en-IL',{weekday:'short',day:'numeric',month:'short'});
+}
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let data = loadData();
+let view = 'home';       // home | history | compare | setup | addExpense | detail
+let detailPeriodId = null;
+let addForm = {amount:'',category:'food',note:''};
+let setupBalance = '';
+let currentPeriodId = getPeriodId();
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function render() {
+  currentPeriodId = getPeriodId();
+  const app = document.getElementById('app');
+  const hasCurrent = !!data.periods[currentPeriodId];
+
+  if (!hasCurrent && view==='home') { view='setup'; }
+
+  if (view==='setup')          { app.innerHTML = renderSetup(); bindSetup(); return; }
+  if (view==='addExpense')     { app.innerHTML = renderAddExpense(); bindAddExpense(); return; }
+  if (view==='detail')         { app.innerHTML = renderDetail(); bindDetail(); return; }
+  if (view==='history')        { app.innerHTML = renderHistory(); bindHistory(); return; }
+  if (view==='compare')        { app.innerHTML = renderCompare(); bindNav(); return; }
+  app.innerHTML = renderHome();
+  bindHome();
+}
+
+// ── SETUP ──────────────────────────────────────────────────────────────────
+function renderSetup() {
+  return `
+  <div class="page setup-wrap" id="setup-page">
+    <div class="setup-emo">💳</div>
+    <h1>New Salary Period</h1>
+    <div class="setup-period">${getPeriodLabel(currentPeriodId)}</div>
+    <p class="setup-hint">Enter your salary or available<br>budget for this period</p>
+    <div class="setup-field">
+      <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:7px;">Salary / Starting Balance (₪)</label>
+      <input type="number" id="setup-input" placeholder="0" value="${setupBalance}" inputmode="decimal">
+    </div>
+    <button class="btn-primary" id="setup-btn">Start Period →</button>
+  </div>`;
+}
+function bindSetup() {
+  const inp = document.getElementById('setup-input');
+  const btn = document.getElementById('setup-btn');
+  inp.addEventListener('input', e=>{ setupBalance=e.target.value; btn.disabled=!setupBalance||Number(setupBalance)<=0; });
+  btn.disabled = !setupBalance||Number(setupBalance)<=0;
+  btn.addEventListener('click', ()=>{
+    if (!setupBalance||Number(setupBalance)<=0) return;
+    data.periods[currentPeriodId] = {
+      id:currentPeriodId, initialBalance:Number(setupBalance),
+      expenses:[], createdAt:new Date().toISOString()
+    };
+    saveData(data);
+    setupBalance='';
+    view='home';
+    toast('Period started! 🎉');
+    render();
+  });
+  inp.focus();
+}
+
+// ── ADD EXPENSE ────────────────────────────────────────────────────────────
+function renderAddExpense() {
+  const catButtons = CATS.map(c=>`
+    <button class="cat-btn${addForm.category===c.id?' sel':''}" data-cat="${c.id}"
+      style="--cat-c:${c.color}">
+      <span class="e">${c.emoji}</span>${c.label}
+    </button>`).join('');
+  return `
+  <div class="page">
+    <div class="hdr">
+      <button class="back-btn" id="back-btn">←</button>
+      <h2>Add Expense</h2>
+      <div style="width:32px"></div>
+    </div>
+    <div style="padding:22px 16px 0">
+      <div class="field">
+        <label>Amount (₪)</label>
+        <input type="number" id="amount-input" placeholder="0" value="${addForm.amount}" inputmode="decimal" autofocus>
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <div class="cat-grid" id="cat-grid">${catButtons}</div>
+      </div>
+      <div class="field">
+        <label style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:7px;display:block;">Note (optional)</label>
+        <input type="text" id="note-input" placeholder="What was this for?" value="${addForm.note}" style="font-size:16px;font-family:'Sora',sans-serif;">
+      </div>
+      <button class="btn-primary" id="add-btn" ${!addForm.amount?'disabled':''}>
+        Add ${addForm.amount?fmt(addForm.amount):''} Expense
+      </button>
+    </div>
+  </div>`;
+}
+function bindAddExpense() {
+  document.getElementById('back-btn').onclick = ()=>{ view='home'; render(); };
+  const amtInp = document.getElementById('amount-input');
+  const noteInp = document.getElementById('note-input');
+  const addBtn  = document.getElementById('add-btn');
+
+  const refreshBtn = ()=>{
+    addBtn.disabled = !addForm.amount||Number(addForm.amount)<=0;
+    addBtn.textContent = `Add ${addForm.amount?fmt(addForm.amount):''} Expense`;
+  };
+  amtInp.addEventListener('input',e=>{ addForm.amount=e.target.value; refreshBtn(); });
+  noteInp.addEventListener('input',e=>{ addForm.note=e.target.value; });
+
+  document.querySelectorAll('.cat-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      addForm.category = btn.dataset.cat;
+      document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('sel'));
+      btn.classList.add('sel');
+      const c=CAT[addForm.category];
+      btn.style.setProperty('--cat-c',c.color);
+    });
+  });
+
+  addBtn.addEventListener('click',()=>{
+    if (!addForm.amount||Number(addForm.amount)<=0) return;
+    const p = data.periods[currentPeriodId];
+    const expense = {
+      id: Date.now().toString(),
+      amount:Number(addForm.amount), category:addForm.category,
+      note:addForm.note||'', date:new Date().toISOString()
+    };
+    p.expenses = [expense,...(p.expenses||[])];
+    saveData(data);
+    addForm={amount:'',category:'food',note:''};
+    view='home'; render();
+    toast('Added ✓');
+  });
+  amtInp.focus();
+}
+
+// ── HOME ───────────────────────────────────────────────────────────────────
+function renderHome() {
+  const p = data.periods[currentPeriodId];
+  const spent = totalSpent(p);
+  const bal = (p?.initialBalance||0) - spent;
+  const pct = p?.initialBalance>0 ? Math.min(spent/p.initialBalance,1) : 0;
+  const r=52, circ=2*Math.PI*r;
+  const dash=circ*pct;
+  const col = pct>0.85?'#FF6B6B':pct>0.6?'#FFE66D':'#4ECDC4';
+  const bd = catBreakdown(p);
+  const maxCat = Math.max(...Object.values(bd),1);
+  const catSorted = Object.entries(bd).sort((a,b)=>b[1]-a[1]);
+
+  const recentTxs = (p?.expenses||[]).slice(0,5).map(e=>{
+    const c=CAT[e.category]||CAT.other;
+    return `<div class="tx-row">
+      <div class="tx-ico" style="background:${c.color}22">${c.emoji}</div>
+      <div class="tx-info">
+        <div class="tx-name">${e.note||c.label}</div>
+        <div class="tx-sub">${c.label} · ${shortDate(e.date)}</div>
+      </div>
+      <div class="tx-amount">-${fmt(e.amount)}</div>
+      <button class="del-btn" data-id="${e.id}">×</button>
+    </div>`;
+  }).join('');
+
+  const showViewAll = (p?.expenses||[]).length>5;
+
+  return `
+  <div class="page">
+    <div class="hdr" style="padding-bottom:0">
+      <div>
+        <div style="font-size:10px;color:var(--text2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px">Current Period</div>
+        <div style="font-weight:800;font-size:16px">${getPeriodLabel(currentPeriodId)}</div>
+      </div>
+      <div class="live-tag">● LIVE</div>
+    </div>
+
+    <div class="card" style="text-align:center;padding:26px 20px">
+      <div style="position:relative;width:140px;height:140px;margin:0 auto">
+        <svg width="140" height="140" class="ring-svg">
+          <circle class="ring-bg" cx="70" cy="70" r="${r}"/>
+          <circle class="ring-fill" cx="70" cy="70" r="${r}"
+            stroke="${col}" stroke-dasharray="${dash} ${circ}"/>
+        </svg>
+        <div class="ring-center">
+          <div class="ring-lbl">Left</div>
+          <div class="ring-val">${p?.initialBalance>0?fmt(bal):'—'}</div>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div>
+          <div class="stat-lbl">Salary</div>
+          <div class="stat-val">${fmt(p?.initialBalance||0)}</div>
+        </div>
+        <div style="width:1px;background:var(--border)"></div>
+        <div>
+          <div class="stat-lbl">Spent</div>
+          <div class="stat-val" style="color:var(--red)">${fmt(spent)}</div>
+        </div>
+      </div>
+    </div>
+
+    ${catSorted.length>0?`
+    <div class="card">
+      <div class="sec-title" style="padding:0 0 10px;font-size:11px">By Category</div>
+      ${catSorted.map(([cat,amt])=>{
+        const c=CAT[cat]||CAT.other;
+        const w=(amt/maxCat*100).toFixed(1);
+        return `<div class="cat-bar">
+          <div class="cat-bar-hdr">
+            <span>${c.emoji} ${c.label}</span>
+            <span style="font-family:'DM Mono',monospace;color:${c.color}">${fmt(amt)}</span>
+          </div>
+          <div class="cat-bar-track">
+            <div class="cat-bar-fill" style="width:${w}%;background:${c.color}"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`:``}
+
+    ${recentTxs?`
+    <div class="sec-title">Recent</div>
+    ${recentTxs}
+    ${showViewAll?`<div class="view-all" id="view-all-btn">View all ${(p?.expenses||[]).length} transactions →</div>`:''}
+    `:`<div class="empty"><div class="empty-emo">🛒</div><p>No expenses yet.<br>Tap <strong>+</strong> to add your first one.</p></div>`}
+
+    <button class="export-btn" id="export-btn">⬇️ Export all data (JSON backup)</button>
+  </div>
+
+  <button id="fab">+</button>
+  ${renderNav('home')}`;
+}
+function bindHome() {
+  document.getElementById('fab').onclick = ()=>{ view='addExpense'; render(); };
+  document.getElementById('export-btn').onclick = exportData;
+  document.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const id=btn.dataset.id;
+      const p=data.periods[currentPeriodId];
+      p.expenses=p.expenses.filter(x=>x.id!==id);
+      saveData(data); render(); toast('Deleted');
+    });
+  });
+  const va = document.getElementById('view-all-btn');
+  if(va) va.onclick=()=>{ detailPeriodId=currentPeriodId; view='detail'; render(); };
+  bindNav();
+}
+
+// ── DETAIL ─────────────────────────────────────────────────────────────────
+function renderDetail() {
+  const pid = detailPeriodId || currentPeriodId;
+  const p = data.periods[pid];
+  if (!p) return '';
+  const spent=totalSpent(p), rem=p.initialBalance-spent;
+  const bd=catBreakdown(p), maxCat=Math.max(...Object.values(bd),1);
+  const isCur=pid===currentPeriodId;
+
+  const txRows=(p.expenses||[]).map(e=>{
+    const c=CAT[e.category]||CAT.other;
+    return `<div class="tx-row">
+      <div class="tx-ico" style="background:${c.color}22">${c.emoji}</div>
+      <div class="tx-info">
+        <div class="tx-name">${e.note||c.label}</div>
+        <div class="tx-sub">${c.label} · ${shortDate(e.date)}</div>
+      </div>
+      <div class="tx-amount">-${fmt(e.amount)}</div>
+      ${isCur?`<button class="del-btn" data-id="${e.id}">×</button>`:''}
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="page">
+    <div class="hdr">
+      <button class="back-btn" id="back-btn">←</button>
+      <h2 style="font-size:14px">${getPeriodLabel(pid)}</h2>
+      <div style="width:32px"></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between">
+        <div>
+          <div class="stat-lbl">Starting Balance</div>
+          <div class="stat-val">${fmt(p.initialBalance)}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="stat-lbl">Total Spent</div>
+          <div class="stat-val" style="color:var(--red)">${fmt(spent)}</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+        <div class="stat-lbl">Remaining</div>
+        <div style="font-family:'DM Mono',monospace;font-weight:800;font-size:28px;color:${rem<0?'var(--red)':'var(--teal)'}">${fmt(rem)}</div>
+      </div>
+    </div>
+
+    ${Object.keys(bd).length>0?`
+    <div class="card">
+      <div class="sec-title" style="padding:0 0 12px">Breakdown</div>
+      ${Object.entries(bd).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>{
+        const c=CAT[cat]||CAT.other;
+        return `<div class="cat-bar">
+          <div class="cat-bar-hdr">
+            <span>${c.emoji} ${c.label}</span>
+            <span style="font-family:'DM Mono',monospace;color:${c.color}">${fmt(amt)}</span>
+          </div>
+          <div class="cat-bar-track">
+            <div class="cat-bar-fill" style="width:${(amt/maxCat*100).toFixed(1)}%;background:${c.color}"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`:``}
+
+    <div class="sec-title">${(p.expenses||[]).length} Transactions</div>
+    ${txRows||`<div class="empty"><div class="empty-emo">🌿</div><p>No expenses in this period.</p></div>`}
+  </div>`;
+}
+function bindDetail() {
+  document.getElementById('back-btn').onclick=()=>{ view='history'; render(); };
+  document.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const pid=detailPeriodId||currentPeriodId;
+      data.periods[pid].expenses=data.periods[pid].expenses.filter(x=>x.id!==btn.dataset.id);
+      saveData(data); render(); toast('Deleted');
+    });
+  });
+}
+
+// ── HISTORY ────────────────────────────────────────────────────────────────
+function renderHistory() {
+  const periods=Object.keys(data.periods).sort().reverse();
+  const cards=periods.map(pid=>{
+    const p=data.periods[pid], spent=totalSpent(p);
+    const pct=p.initialBalance>0?Math.min(spent/p.initialBalance,1):0;
+    const isCur=pid===currentPeriodId;
+    const col=pct>0.85?'var(--red)':'var(--teal)';
+    return `<div class="period-card${isCur?' current':''}" data-pid="${pid}">
+      <div class="period-hdr">
+        <div>
+          <div class="period-title">${getPeriodLabel(pid)}</div>
+          ${isCur?'<span class="period-badge">CURRENT</span>':''}
+        </div>
+        <div>
+          <div class="period-amt">-${fmt(spent)}</div>
+          <div class="period-sub">of ${fmt(p.initialBalance)}</div>
+        </div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width:${(pct*100).toFixed(1)}%;background:${col}"></div>
+      </div>
+      <div class="period-footer">${(p.expenses||[]).length} transactions · ${fmt(p.initialBalance-spent)} left</div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="page">
+    <div class="hdr"><div></div><h2>All Periods</h2><div></div></div>
+    <div style="height:14px"></div>
+    ${cards||`<div class="empty"><div class="empty-emo">📭</div><p>No periods yet.</p></div>`}
+  </div>
+  ${renderNav('history')}`;
+}
+function bindHistory() {
+  document.querySelectorAll('.period-card').forEach(card=>{
+    card.addEventListener('click',()=>{
+      detailPeriodId=card.dataset.pid; view='detail'; render();
+    });
+  });
+  bindNav();
+}
+
+// ── COMPARE ────────────────────────────────────────────────────────────────
+function renderCompare() {
+  const periods=Object.keys(data.periods).sort().reverse().slice(0,6);
+  if(periods.length<2) return `
+  <div class="page">
+    <div class="hdr"><div></div><h2>Compare</h2><div></div></div>
+    <div class="empty" style="padding-top:80px">
+      <div class="empty-emo">📊</div>
+      <p>Need at least 2 periods<br>to compare.</p>
+    </div>
+  </div>${renderNav('compare')}`;
+
+  const allCats=[...new Set(periods.flatMap(pid=>Object.keys(catBreakdown(data.periods[pid]))))];
+  const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  const cards=allCats.map(catId=>{
+    const c=CAT[catId]||CAT.other;
+    const vals=periods.map(pid=>catBreakdown(data.periods[pid])[catId]||0);
+    const maxV=Math.max(...vals,1);
+    const rows=periods.map((pid,i)=>{
+      const [y,m]=pid.split('-').map(Number);
+      const lbl=`${M[m-1]} '${String(y).slice(2)}`;
+      const isCur=pid===currentPeriodId;
+      const w=(vals[i]/maxV*100).toFixed(1);
+      return `<div class="cmp-row">
+        <div class="cmp-row-hdr">
+          <span style="color:${isCur?'var(--teal)':'var(--text2)'}">${lbl}${isCur?' ●':''}</span>
+          <span style="font-family:'DM Mono',monospace;color:${c.color}">${fmt(vals[i])}</span>
+        </div>
+        <div class="cmp-track">
+          <div class="cmp-fill" style="width:${w}%;background:${c.color}${isCur?'':'88'}"></div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="cmp-card">
+      <div class="cmp-cat-title"><span style="font-size:20px">${c.emoji}</span>${c.label}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="page">
+    <div class="hdr"><div></div><h2>Compare Periods</h2><div></div></div>
+    <div style="height:14px"></div>
+    ${cards}
+  </div>${renderNav('compare')}`;
+}
+
+// ── NAV ────────────────────────────────────────────────────────────────────
+function renderNav(active) {
+  const tabs=[['home','🏠','Home'],['history','📋','History'],['compare','📊','Compare']];
+  return `<nav>${tabs.map(([v,ico,lbl])=>`
+    <button class="${active===v?'active':''}" data-view="${v}">
+      <span class="ico">${ico}</span>${lbl}
+    </button>`).join('')}</nav>`;
+}
+function bindNav() {
+  document.querySelectorAll('nav button').forEach(btn=>{
+    btn.addEventListener('click',()=>{ view=btn.dataset.view; render(); });
+  });
+}
+
+// ── EXPORT ─────────────────────────────────────────────────────────────────
+function exportData() {
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`my-expenses-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('Exported! 📁');
+}
+
+// ── BOOT ───────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
